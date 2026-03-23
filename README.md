@@ -1,4 +1,4 @@
-# ship-kit
+# Agentic Development Harness - TypeScript
 
 Quality harnesses for AI-integrated web apps. Add what you need.
 

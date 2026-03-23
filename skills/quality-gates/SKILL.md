@@ -23,20 +23,22 @@ import eslint from "@eslint/js";
 import tseslint from "typescript-eslint";
 import sonarjs from "eslint-plugin-sonarjs";
 
-export default tseslint.config(
+export default [
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   sonarjs.configs.recommended,
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        projectService: {
+          allowDefaultProject: ["eslint.config.js", "vitest.config.ts"],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },
     rules: {
       // Complexity
-      "max-complexity": ["error", 10],
+      complexity: ["error", 10],
       "sonarjs/cognitive-complexity": ["error", 12],
 
       // Size
@@ -67,19 +69,25 @@ export default tseslint.config(
     },
   },
   {
-    // Relax for config files
-    files: ["*.config.*", "*.config.ts"],
+    // Ignore config files from type-aware linting
+    files: ["*.config.*"],
     rules: {
       "max-lines": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
     },
   },
-);
+];
 ```
+
+**Note:** The config uses a plain array export (not `tseslint.config()` wrapper) to avoid plugin namespace resolution issues with `strictTypeChecked`. The `allowDefaultProject` option in `parserOptions` lets ESLint type-check root config files that sit outside your `tsconfig.json` include paths.
 
 Requires:
 ```bash
-npm install -D eslint @eslint/js typescript-eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-sonarjs
+npm install -D eslint@^9 @eslint/js typescript-eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-sonarjs
 ```
+
+**Important:** Pin `eslint@^9`. The flat config conventions in this setup target ESLint 9. The rule is `complexity` (not `max-complexity`, which was removed in newer versions).
 
 ## TypeScript config
 
@@ -103,6 +111,8 @@ Each flag catches a different class of bug:
 - `noUnusedParameters`: unused function args
 - `noFallthroughCasesInSwitch`: missing break statements
 - `noUncheckedIndexedAccess`: array/object indexing returns `T | undefined`
+
+**Note:** Your `tsconfig.json` `include` array must point to a directory that contains at least one `.ts` file, or TypeScript will error with TS18003. If you're starting fresh, create a placeholder like `src/index.ts` before running `tsc --noEmit`.
 
 ## Vitest config
 
@@ -143,6 +153,8 @@ Requires:
 ```bash
 npm install -D vitest @vitest/coverage-v8
 ```
+
+**Note on fresh projects:** Coverage thresholds only apply when there are source files to measure. On a project with no `src/` files yet, `vitest run --coverage` will either pass vacuously or error depending on your setup. Start with thresholds at 0 and ratchet up as you add source files and tests, or wait to enable thresholds until you have your first module and test in place.
 
 ## Prettier config
 
@@ -202,16 +214,17 @@ Add to `package.json`:
 ## Install
 
 1. Copy configs into your project root
-2. Install dependencies (see each section)
-3. Add scripts to package.json
-4. Set up git hooks: `git config core.hooksPath .githooks`
-5. Run `npm run quality` to verify
+2. Install dependencies (see each section — note the `eslint@^9` pin)
+3. Make sure `tsconfig.json` includes at least one directory with a `.ts` file
+4. Add scripts to package.json
+5. Set up git hooks: `git config core.hooksPath .githooks`
+6. Run `npm run quality` to verify
 
 ## Tuning thresholds
 
 Start strict. Relax if needed. These defaults come from a production AI agent with 258 tests.
 
-If 85% coverage is too high for a new project, drop to 70% and ratchet up as you add tests. The threshold should represent "below this, we're shipping blind."
+If 85% coverage is too high for a new project, start at 0% and ratchet up as you add tests. The threshold should represent "below this, we're shipping blind."
 
 Complexity limits (10 cyclomatic, 12 cognitive) are tight. If a function hits them, it needs refactoring, not a higher limit. Extract helpers, use early returns, simplify conditionals.
 

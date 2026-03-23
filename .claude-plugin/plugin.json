@@ -1,7 +1,7 @@
 {
   "name": "ship-kit",
   "description": "Quality harnesses for AI-integrated web apps: digital twins, prompt evals, code quality gates, accessibility checks, dependency injection",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": {
     "name": "Marius Wium",
     "email": "mcwium@gmail.com"
